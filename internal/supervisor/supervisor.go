@@ -1,0 +1,58 @@
+package supervisor
+
+import (
+	"context"
+	"log/slog"
+	"reflect"
+	"sync"
+)
+
+type SupervisedService interface {
+	Start(ctx context.Context) error
+}
+
+type Supervisor struct {
+	services []SupervisedService
+}
+
+func New(svc ...SupervisedService) *Supervisor {
+	return &Supervisor{
+		services: svc,
+	}
+}
+
+func (s *Supervisor) Add(svc SupervisedService) *Supervisor {
+	s.services = append(s.services, svc)
+
+	return s
+}
+
+func (s *Supervisor) Start(ctx context.Context) error {
+	var wg sync.WaitGroup
+	cancelCtx, cancel := context.WithCancel(ctx)
+
+	errCh := make(chan error, len(s.services))
+
+	for _, svc := range s.services {
+		wg.Add(1)
+		go func(svc SupervisedService) {
+			defer wg.Done()
+
+			svcName := serviceName(svc)
+			slog.Info("Starting service", "service", svcName)
+			errCh <- svc.Start(cancelCtx)
+			slog.Info("Service stopped", "service", svcName)
+		}(svc)
+	}
+
+	firstErr := <-errCh
+	cancel()
+	wg.Wait()
+
+	return firstErr
+}
+
+// serviceName returns name of underlying struct of the service, for easier identification in logs.
+func serviceName(svc SupervisedService) string {
+	return reflect.TypeOf(reflect.Indirect(reflect.ValueOf(svc)).Interface()).String()
+}

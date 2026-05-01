@@ -1,0 +1,9 @@
+namespace: node-min-lifetime
+namePrefix: node-min-lifetime-
+resources:
+  - ../rbac
+  - ../manager
+#  - ../prometheus
+
+patches:
+#  - path: manager_auth_proxy_patch.yaml

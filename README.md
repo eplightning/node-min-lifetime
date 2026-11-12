@@ -2,10 +2,11 @@
 
 `node-min-lifetime` is a Kubernetes controller that prevents nodes from being scaled down before they reach a configured minimum lifetime.
 
-It manages the Cluster Autoscaler annotation:
+It manages the Cluster Autoscaler / Karpenter annotations:
 
 ```text
 cluster-autoscaler.kubernetes.io/scale-down-disabled
+karpenter.sh/do-not-disrupt
 ```
 
 When a node is younger than its configured minimum lifetime, the controller sets this annotation to `"true"`. Once the node reaches the minimum lifetime, the annotation is removed so the Cluster Autoscaler can scale the node down normally.
@@ -33,6 +34,7 @@ If the node is too young, the controller applies:
 
 ```yaml
 cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
+karpenter.sh/do-not-disrupt: "true"
 ```
 
 When the node is old enough, the annotation is removed.
@@ -163,7 +165,7 @@ kubectl apply -f manifests/default.yaml
 The default deployment uses the image:
 
 ```text
-ghcr.io/eplightning/node-min-lifetime:v0.1.0
+ghcr.io/eplightning/node-min-lifetime:v0.2.0
 ```
 
 To regenerate the manifest from the kustomize configuration:

@@ -22,6 +22,7 @@ type NodeReconciler struct {
 
 const (
 	ScaleDownDisabledAnnotation = "cluster-autoscaler.kubernetes.io/scale-down-disabled"
+	DoNotDisruptAnnotation      = "karpenter.sh/do-not-disrupt"
 
 	CustomScaleDownDisabledAnnotation = "node-min-lifetime.eplight.org/scale-down-disabled"
 	CustomScaleDownDisabledLabel      = "node-min-lifetime.eplight.org/scale-down-disabled"
@@ -86,13 +87,17 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		requeueAfter = minLifetime - lifetime
 	}
 
-	if scaleDownDisabled && node.Annotations[ScaleDownDisabledAnnotation] != "true" {
+	if scaleDownDisabled &&
+		(node.Annotations[ScaleDownDisabledAnnotation] != "true" || node.Annotations[DoNotDisruptAnnotation] != "true") {
 		node.Annotations[ScaleDownDisabledAnnotation] = "true"
+		node.Annotations[DoNotDisruptAnnotation] = "true"
 		if err := r.Update(ctx, &node); err != nil {
 			return ctrl.Result{}, err
 		}
-	} else if !scaleDownDisabled && node.Annotations[ScaleDownDisabledAnnotation] != "" {
+	} else if !scaleDownDisabled &&
+		(node.Annotations[ScaleDownDisabledAnnotation] != "" || node.Annotations[DoNotDisruptAnnotation] != "") {
 		delete(node.Annotations, ScaleDownDisabledAnnotation)
+		delete(node.Annotations, DoNotDisruptAnnotation)
 		if err := r.Update(ctx, &node); err != nil {
 			return ctrl.Result{}, err
 		}
